@@ -9,6 +9,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using static VideoOptimizer.Program.VideoClipperWrapper;
 
@@ -17,6 +18,7 @@ namespace VideoOptimizer
     internal class Program
     {
         public class VideoClipperWrapper {
+            static int ffmpeg_process_id; //process id of started ffmpeg process - used to close it if user cancels or pauses
             public class audio_info
             {
                 #region Properties
@@ -306,64 +308,124 @@ namespace VideoOptimizer
                 }
             }
 
+            void Ffmpeg_OutputDataReceived(object sender, DataReceivedEventArgs e)
+            {
+                if (e.Data != null && e.Data.StartsWith("frame="))
+                {
+                    //todo: show progress
+                    Console.WriteLine(e.Data);
+                }
+            }
+            void Ffmpeg_ErrorDataReceived(object sender, DataReceivedEventArgs e)
+            {
+                if (e.Data != null && e.Data.StartsWith("frame="))
+                {
+                    //todo: show progress
+                    Console.WriteLine(e.Data);
+                }
+            }
+
             public void FileProperties(string input_file)
             {
                 try
                 {
                     json = "";
-                    //read file properties with ffprobe (in separate thread)
                     ffprobe(input_file);
                     ff_RunWorkerCompleted();
-                    //BackgroundWorker ff = new BackgroundWorker();					 //new instance of Background worker
-                    //ff.WorkerReportsProgress = true;
-                    //ff.DoWork += ff_DoWork;											 //handler for starting thread
-                    //ff.RunWorkerCompleted += ff_RunWorkerCompleted;					 //handler for finishing thread
-                    //ff.RunWorkerAsync();    //start job as separate thread
                 }
                 catch { }
 
             }
 
+            public int batchTask(string current_task)
+            {           //called when starting each ffmpeg encoding task, passed task string as parameter
+                try
+                {
+                    Process proc = new System.Diagnostics.Process(); //process that call cmd.exe to execute ffmpeg task
+                    System.Diagnostics.ProcessStartInfo procStartffmpeg;
+
+                    procStartffmpeg = new System.Diagnostics.ProcessStartInfo("cmd", "/c  " + current_task);// Windows: define Process Info to assing to the process
+                                                                                                            // The following commands are needed to redirect the standard output and standard error.
+                                                                                                            // This means that it will be redirected to the Process.StandardOutput StreamReader.
+                    procStartffmpeg.RedirectStandardOutput = true;
+                    procStartffmpeg.RedirectStandardInput = true;
+                    procStartffmpeg.RedirectStandardError = true;
+                    procStartffmpeg.UseShellExecute = false;
+                    procStartffmpeg.CreateNoWindow = true;  // Do not create the black window.
+                    procStartffmpeg.WorkingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);//set path of vtc.exe same as ffmpeg.exe
+
+                    proc.StartInfo = procStartffmpeg;   // Now we assign process its ProcessStartInfo and start it
+                    proc.Start();               //start the ffmpeg
+                    proc.OutputDataReceived += Ffmpeg_OutputDataReceived;
+                    proc.ErrorDataReceived += Ffmpeg_ErrorDataReceived;
+                    ffmpeg_process_id = proc.Id;//remember process id so that it can be closed if user cancels
+                    Thread.Sleep(500);          //wait a little bit - prevent glitches for concurrent threads
+                    proc.BeginOutputReadLine(); // Set our event handler to asynchronously read the sort output.
+                    proc.BeginErrorReadLine();
+                    proc.WaitForExit();         //since it is started as separate thread, GUI will continue separately, but we wait here before starting next task
+                    proc.CancelOutputRead();    //stop reading redirected standard output
+                    proc.CancelErrorRead();
+                    return 0;                   //0 means OK, not used so far
+                }
+                catch (Exception ex)
+                {
+                    return -1;                  //-1 means NOT OK, not used so far
+                }
+            }
             public file_info File_info;
             public video_info Video_info = new video_info { };
             public audio_info[] Audio_info;
             public subtitle_info[] Subtitle_info;
         }
        
+
         static void Main(string[] args)
         {
+            Stopwatch stopwatch = new Stopwatch(); //measure execution time for each job
             string inputFolder = "D:\\testVideo\\";
             string outputFolder = "D:\\output\\";
             DirectoryInfo place = new DirectoryInfo(@inputFolder);
             FileInfo[] Files = place.GetFiles();
+            int no = 0;
             foreach (FileInfo i in Files)
             {
+                no ++;
+                Console.WriteLine("" + no + "." + "starting video conversion : " + i.Name);
                 VideoClipperWrapper converter = new VideoClipperWrapper();
                 string inputFilePath = inputFolder + i.Name;
-                string outputFilePath = outputFolder + i.Name;
+
+                int str_position = inputFilePath.LastIndexOf("\\") + 1;
+                string in_file = inputFilePath.Substring(str_position);//after that there is a file name
+
+                str_position = in_file.LastIndexOf('.') + 1;	//get position just before extension
+                in_file = in_file.Substring(0, str_position);	//set temp var in_file with input file name
+                string outputFilePath = outputFolder + in_file + "mp4";
+                Console.WriteLine("getting property");
                 converter.FileProperties(inputFilePath);
-                //int in_h = converter.Video_info.height;
-                //int in_w = converter.Video_info.width;
-                //double in_duration = converter.Video_info.duration;
-                ////currently we want our output video to be 576 * 1024
-                //int crop_w, crop_h, out_w = 576, out_h = 1024;
+                Console.WriteLine("finsihed getting property");
+                int in_h = converter.Video_info.height;
+                int in_w = converter.Video_info.width;
+                double in_duration = converter.Video_info.duration;
+                //currently we want our output video to be 576 * 1024
+                int crop_w, crop_h, out_w = 576, out_h = 1024;
 
-                //crop_w = (in_h * 9 / 16);
-                //crop_h = in_h;
-                //string command = "";
+                crop_w = (in_h * 9 / 16);
+                crop_h = in_h;
+                string command = "";
 
-                //if (in_duration > 82)
-                //{
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}\" -ss 20 -t 60 {output_file}";
-                //}
-                //else
-                //{
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}\" {output_file}";
-                //}
-                //ffmpeg_process_id = batchTask(command);     //start encoding, process has already finished so this var can be reused
-
-                ////unselect this row in the list
-                //stopwatch.Restart();
+                if (in_duration > 82)
+                {
+                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}\" -ss 20 -t 60 {outputFilePath}";
+                }
+                else
+                {
+                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}\" {outputFilePath}";
+                }
+                Console.WriteLine("starting conversion");
+                converter.batchTask(command);     //start encoding, process has already finished so this var can be reused
+                Console.WriteLine("finished conversion");
+                //unselect this row in the list
+                stopwatch.Restart();
             }
         }
     }
