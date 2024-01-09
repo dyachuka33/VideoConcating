@@ -1,0 +1,15 @@
+.vs
+./VideoOptimizer/avcodec-60.dll
+./VideoOptimizer/avdevice-60.dll
+./VideoOptimizer/avfilter-9.dll
+./VideoOptimizer/avformat-60.dll
+./VideoOptimizer/avutil-58.dll
+./VideoOptimizer/ffmpeg.exe
+./VideoOptimizer/ffplay.exe
+./VideoOptimizer/ffprobe.exe
+./VideoOptimizer/Newtonsoft.Json.dll
+./VideoOptimizer/postproc-57.dll
+./VideoOptimizer/swresample-4.dll
+./VideoOptimizer/swscale-7.dll
+./VideoClipper/VideoOptimizer/bin
+./VideoClipper/VideoOptimizer/obj
