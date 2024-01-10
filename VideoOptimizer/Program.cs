@@ -53,6 +53,7 @@ namespace VideoOptimizer
                 #region Properties
                 public string filename { get; set; }
                 public double size { get; set; }
+                public int audio_channel_nums { get; set; }
                 #endregion
             }
 
@@ -114,6 +115,7 @@ namespace VideoOptimizer
                     Dictionary<int, string> comboSource = new Dictionary<int, string>(); //create new collection for combo
 
                     File_info = new file_info { };
+                    File_info.audio_channel_nums = count_aud_streams;
                     Video_info = new video_info { };
                     Audio_info = new audio_info[count_aud_streams];
                     Subtitle_info = new subtitle_info[count_sub_streams];
@@ -411,19 +413,95 @@ namespace VideoOptimizer
 
                 crop_w = (in_h * 9 / 16);
                 crop_h = in_h;
+
+                int audio_bitrate = 96 * converter.File_info.audio_channel_nums;
                 string command = "";
 
+                /*commands for using 2 pass encoding* ---------- Possible */
                 if (in_duration > 82)
                 {
                     //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
-                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 5 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 5 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
+                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 1 -f mp4 NUL && " +
+                        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
                 }
                 else
                 {
-                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 5 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf -qp 5 \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
+                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 1 -f mp4 NUL && " +
+                        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
                 }
+
+                /*commands for using 2 pass encoding, qp ---------- Don't use this
+                 * 
+                 * tried testing using different with qp value 5 10 25 31
+                 * the output size was very big in 5, 10
+                 * in case of 25 : 2.5M bitrate and with 2 pass encoding causes error
+                 * 
+                 * -----> but pretty bad*/
+                //if (in_duration > 82)
+                //{
+                //    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
+                //}
+                //else
+                //{
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
+                //}
+
+
+                /*commands for using 2 pass encoding crf ---------- Don't use this
+                 * difficult to chose right crf value
+                 * testing with crf = 
+                 * 
+                 * */
+                //if (in_duration > 82)
+                //{
+                //    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
+                //}
+                //else
+                //{
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
+                //}
+
+                /*commands crf without 2 Pass encoding ----------  POSSIBLE
+                 * difficult to chose right crf value
+                 * testing with crf = 40
+                 * 
+                 * */
+                //if (in_duration > 82)
+                //{
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 1000k -bufsize 3000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //}
+                //else
+                //{
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 1000k -bufsize 3000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" {outputFilePath}";
+                //}
+
+                //Console.WriteLine("starting conversion");
+                //converter.batchTask(command);     //start encoding, process has already finished so this var can be reused
+                //Console.WriteLine("finished conversion");
+                ////unselect this row in the list
+                //stopwatch.Restart();
+
+
+                /*commands crf without 2 Pass encoding ----------  POSSIBLE
+                 * difficult to chose right crf value
+                 * testing with crf = 40
+                 * 
+                 * */
+                //if (in_duration > 82)
+                //{
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //}
+                //else
+                //{
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" {outputFilePath}";
+                //}
+
                 Console.WriteLine("starting conversion");
                 converter.batchTask(command);     //start encoding, process has already finished so this var can be reused
                 Console.WriteLine("finished conversion");
