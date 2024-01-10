@@ -415,11 +415,11 @@ namespace VideoOptimizer
 
                 if (in_duration > 82)
                 {
-                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
                 }
                 else
                 {
-                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h},deblock=filter=weak:block=4\" {outputFilePath}";
+                    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" {outputFilePath}";
                 }
                 Console.WriteLine("starting conversion");
                 converter.batchTask(command);     //start encoding, process has already finished so this var can be reused
