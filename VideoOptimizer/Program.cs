@@ -15,8 +15,10 @@ using static VideoOptimizer.Program.VideoClipperWrapper;
 
 namespace VideoOptimizer
 {
+    
     internal class Program
     {
+        const int BITRATE_PER_AUDIO_CHANNEL = 128;
         public class VideoClipperWrapper {
             static int ffmpeg_process_id; //process id of started ffmpeg process - used to close it if user cancels or pauses
             public class audio_info
@@ -414,7 +416,7 @@ namespace VideoOptimizer
                 crop_w = (in_h * 9 / 16);
                 crop_h = in_h;
 
-                int audio_bitrate = 96 * converter.File_info.audio_channel_nums;
+                int audio_bitrate = BITRATE_PER_AUDIO_CHANNEL * converter.File_info.audio_channel_nums;
                 string command = "";
 
                 /*commands for using 2 pass encoding* ---------- Possible */
