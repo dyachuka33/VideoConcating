@@ -422,12 +422,12 @@ namespace VideoOptimizer
                 {
                     //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
                     command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -an -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
+                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 \"{outputFilePath}\"";
                 }
                 else
                 {
                     command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -an -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
+                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 \"{outputFilePath}\"";
                 }
 
                 /*commands for using 2 pass encoding, qp ---------- Don't use this
