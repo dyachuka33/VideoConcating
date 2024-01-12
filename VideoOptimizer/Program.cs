@@ -436,13 +436,13 @@ namespace VideoOptimizer
                 if (in_duration > 82)
                 {
                     //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
-                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -r 30 -b:v 1000k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -an -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -r 30 -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 \"{outputFilePath}\"";
+                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -r 30 -g 90 -b:v 1000k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -an -pass 1 -f mp4 NUL && " +
+                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -r 30 -g 90 -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 \"{outputFilePath}\"";
                 }
                 else
                 {
-                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -r 30 -b:v 1000k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -an -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -r 30 -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -pass 2 \"{outputFilePath}\"";
+                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -r 30 -g 90 -b:v 1000k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -an -pass 1 -f mp4 NUL && " +
+                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -r 30 -g 90 -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -pass 2 \"{outputFilePath}\"";
                 }
 
 
