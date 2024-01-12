@@ -411,26 +411,37 @@ namespace VideoOptimizer
                 int in_w = converter.Video_info.width;
                 double in_duration = converter.Video_info.duration;
                 //currently we want our output video to be 576 * 1024
-                int crop_w, crop_h, out_w = 576, out_h = 1024;
-
-                crop_w = (in_h * 9 / 16);
-                crop_h = in_h;
+                int out_w = 576, out_h = 1024;
 
                 int audio_bitrate = BITRATE_PER_AUDIO_CHANNEL * converter.File_info.audio_channel_nums;
                 string command = "";
-
-                /*commands for using 2 pass encoding* ---------- Possible */
+                /*commands for using 2 pass encoding CBR* ---------- Possible */
                 if (in_duration > 82)
                 {
-                    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
-                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -an -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 \"{outputFilePath}\"";
+                    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -an -pass 1 -f mp4 NUL && " +
+                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 \"{outputFilePath}\"";
                 }
                 else
                 {
-                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -an -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 \"{outputFilePath}\"";
+                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -an -pass 1 -f mp4 NUL && " +
+                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -pass 2 \"{outputFilePath}\"";
                 }
+
+
+
+                ///*commands for using 2 pass encoding* ---------- Possible */
+                //if (in_duration > 82)
+                //{
+                //    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -an -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 \"{outputFilePath}\"";
+                //}
+                //else
+                //{
+                //    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -b:v 1000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -an -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 \"{outputFilePath}\"";
+                //}
 
                 /*commands for using 2 pass encoding, qp ---------- Don't use this
                  * 
@@ -441,14 +452,14 @@ namespace VideoOptimizer
                  * -----> but pretty bad*/
                 //if (in_duration > 82)
                 //{
-                //    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 1 -f mp4 NUL && " +
-                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
+                //    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
                 //}
                 //else
                 //{
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 1 -f mp4 NUL && " +
-                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -qp 25 -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
                 //}
 
 
@@ -459,14 +470,14 @@ namespace VideoOptimizer
                  * */
                 //if (in_duration > 82)
                 //{
-                //    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 1 -f mp4 NUL && " +
-                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
+                //    //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 {outputFilePath}";
                 //}
                 //else
                 //{
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 1 -f mp4 NUL && " +
-                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 1 -f mp4 NUL && " +
+                //        $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 2500k -bufsize 5000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -pass 2 {outputFilePath}";
                 //}
 
                 /*commands crf without 2 Pass encoding ----------  POSSIBLE
@@ -476,11 +487,11 @@ namespace VideoOptimizer
                  * */
                 //if (in_duration > 82)
                 //{
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 1000k -bufsize 3000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 1000k -bufsize 3000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
                 //}
                 //else
                 //{
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 1000k -bufsize 3000k -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -crf 20 -maxrate 1000k -bufsize 3000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" {outputFilePath}";
                 //}
 
                 //Console.WriteLine("starting conversion");
@@ -497,11 +508,11 @@ namespace VideoOptimizer
                  * */
                 //if (in_duration > 82)
                 //{
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -qp 25 -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
                 //}
                 //else
                 //{
-                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -qp 25 -vf \"crop={crop_w}:{crop_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" {outputFilePath}";
+                //    command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a aac -b:v 1000k -qp 25 -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" {outputFilePath}";
                 //}
 
                 Console.WriteLine("starting conversion");
