@@ -336,16 +336,14 @@ namespace VideoOptimizer
 
             void Ffmpeg_CropOutputDataReceived(object sender, DataReceivedEventArgs e)
             {
-                Console.WriteLine(e.Data);
-                if (e.Data != null)
+                if (e.Data != null && e.Data.Contains("crop="))
                 {
-                    Console.WriteLine(e.Data);
                     Regex regex = new Regex(@"crop=(\d+:\d+:\d+:\d+)");
                     Match match = regex.Match(e.Data);
                     if (match.Success)
                     {
                         string cropValues = match.Groups[1].Value;
-                        Video_info.crop_params = cropValues;
+                        Video_info.crop_params = "crop=" + cropValues;
                     }
                     else
                     {
@@ -355,14 +353,14 @@ namespace VideoOptimizer
             }
             void Ffmpeg_CropErrorDataReceived(object sender, DataReceivedEventArgs e)
             {
-                if (e.Data != null)
+                if (e.Data != null && e.Data.Contains("crop="))
                 {
                     Regex regex = new Regex(@"crop=(\d+:\d+:\d+:\d+)");
                     Match match = regex.Match(e.Data);
                     if (match.Success)
                     {
                         string cropValues = match.Groups[1].Value;
-                        Video_info.crop_params = cropValues;
+                        Video_info.crop_params = "crop=" + cropValues;
                     }
                     else
                     {
