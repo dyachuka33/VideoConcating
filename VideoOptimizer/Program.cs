@@ -47,6 +47,11 @@ namespace VideoOptimizer
                 public string profile { get; set; }
                 public int width { get; set; } = 0;
                 public int height { get; set; } = 0;
+                public int crop_width { get; set; } = 0;
+                public int crop_height { get; set; } = 0;
+                public int crop_x { get; set; } = 0;
+                public int crop_y { get; set; } = 0;
+                public string crop_params { get; set; } = "";
                 public string r_frame_rate { get; set; }
                 #endregion
             }
@@ -329,6 +334,42 @@ namespace VideoOptimizer
                 }
             }
 
+            void Ffmpeg_CropOutputDataReceived(object sender, DataReceivedEventArgs e)
+            {
+                Console.WriteLine(e.Data);
+                if (e.Data != null)
+                {
+                    Console.WriteLine(e.Data);
+                    Regex regex = new Regex(@"crop=(\d+:\d+:\d+:\d+)");
+                    Match match = regex.Match(e.Data);
+                    if (match.Success)
+                    {
+                        string cropValues = match.Groups[1].Value;
+                        Video_info.crop_params = cropValues;
+                    }
+                    else
+                    {
+
+                    }
+                }
+            }
+            void Ffmpeg_CropErrorDataReceived(object sender, DataReceivedEventArgs e)
+            {
+                if (e.Data != null)
+                {
+                    Regex regex = new Regex(@"crop=(\d+:\d+:\d+:\d+)");
+                    Match match = regex.Match(e.Data);
+                    if (match.Success)
+                    {
+                        string cropValues = match.Groups[1].Value;
+                        Video_info.crop_params = cropValues;
+                    }
+                    else
+                    {
+
+                    }
+                }
+            }
             public void FileProperties(string input_file)
             {
                 try
@@ -339,6 +380,40 @@ namespace VideoOptimizer
                 }
                 catch { }
 
+            }
+
+            public int CropDetect(string input_file)
+            {
+                try
+                {
+                    Process proc = new System.Diagnostics.Process(); //process that call cmd.exe to execute ffmpeg task
+                    System.Diagnostics.ProcessStartInfo procStartffmpeg;
+                    string command = $"ffmpeg -i \"{input_file}\" -t 1 -vf cropdetect -f mp4 NUL";
+                    procStartffmpeg = new System.Diagnostics.ProcessStartInfo("cmd", "/c  " + command);
+                                                                                                       
+                    procStartffmpeg.RedirectStandardOutput = true;
+                    procStartffmpeg.RedirectStandardInput = true;
+                    procStartffmpeg.RedirectStandardError = true;
+                    procStartffmpeg.UseShellExecute = false;
+                    procStartffmpeg.CreateNoWindow = true;  // Do not create the black window.
+                    procStartffmpeg.WorkingDirectory = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);//set path of vtc.exe same as ffmpeg.exe
+
+                    proc.StartInfo = procStartffmpeg;   // Now we assign process its ProcessStartInfo and start it
+                    proc.Start();               //start the ffmpeg
+                    proc.OutputDataReceived += Ffmpeg_CropOutputDataReceived;
+                    proc.ErrorDataReceived += Ffmpeg_CropErrorDataReceived;
+                    ffmpeg_process_id = proc.Id;//remember process id so that it can be closed if user cancels
+                    proc.BeginOutputReadLine(); // Set our event handler to asynchronously read the sort output.
+                    proc.BeginErrorReadLine();
+                    proc.WaitForExit();         //since it is started as separate thread, GUI will continue separately, but we wait here before starting next task
+                    proc.CancelOutputRead();    //stop reading redirected standard output
+                    proc.CancelErrorRead();
+                    return 0;                   //0 means OK, not used so far
+                }
+                catch (Exception ex)
+                {
+                    return -1;                  //-1 means NOT OK, not used so far
+                }
             }
 
             public int batchTask(string current_task)
@@ -406,14 +481,14 @@ namespace VideoOptimizer
                 string outputFilePath = outputFolder + in_file + "mp4";
                 Console.WriteLine("getting property");
                 converter.FileProperties(inputFilePath);
+                converter.CropDetect(inputFilePath);
                 Console.WriteLine("finsihed getting property");
-                int in_h = converter.Video_info.height;
-                int in_w = converter.Video_info.width;
                 double in_duration = converter.Video_info.duration;
                 //currently we want our output video to be 576 * 1024
                 int out_w = 576, out_h = 1024;
 
                 int audio_bitrate = BITRATE_PER_AUDIO_CHANNEL * converter.File_info.audio_channel_nums;
+                string crop_params = converter.Video_info.crop_params;
                 string command = "";
 
                 /*commands for using 2 pass encoding crf ---------- Don't use this
@@ -436,17 +511,14 @@ namespace VideoOptimizer
                 if (in_duration > 82)
                 {
                     //command = $"ffmpeg -i \"{inputFilePath}\" -c:v libx264 -movflags +faststart -c:a copy -b:v 1000k -vf \"crop={out_w}:{out_h},scale={out_w}*{out_h}:sws_flags=lanczos,deblock=filter=weak:block=4\" -ss 20 -t 60 {outputFilePath}";
-                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -preset veryslow -me_method tesa -movflags +faststart -r 30 -g 90 -b:v 1000k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -an -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -preset veryslow -me_method tesa -movflags +faststart -r 30 -g 90 -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 \"{outputFilePath}\"";
+                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -preset veryslow -me_method tesa -movflags +faststart -r 30 -g 90 -b:v 1000k -vf \"{crop_params},scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -an -pass 1 -f mp4 NUL && " +
+                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -preset veryslow -me_method tesa -movflags +faststart -r 30 -g 90 -b:v 1000k -c:a aac -b:a {audio_bitrate}k -vf \"{crop_params},scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -ss 20 -t 60 -pass 2 \"{outputFilePath}\"";
                 }
                 else
                 {
-                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -preset veryslow -me_method tesa  -movflags +faststart -r 30 -g 90 -b:v 1000k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -an -pass 1 -f mp4 NUL && " +
-                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -preset veryslow -me_method tesa -movflags +faststart -r 30 -g 90 -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -pass 2 \"{outputFilePath}\"";
+                    command = $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -preset veryslow -me_method tesa  -movflags +faststart -r 30 -g 90 -b:v 1000k -vf \"{crop_params},scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -an -pass 1 -f mp4 NUL && " +
+                        $"ffmpeg -y -i \"{inputFilePath}\" -c:v libx264 -preset veryslow -me_method tesa -movflags +faststart -r 30 -g 90 -c:a aac -b:v 1000k  -b:a {audio_bitrate}k -vf \"{crop_params},scale=-1:{out_h}:sws_flags=lanczos,crop={out_w}:{out_h},deblock=filter=weak:block=4\" -pass 2 \"{outputFilePath}\"";
                 }
-
-
-
                 ///*commands for using 2 pass encoding* ---------- Possible */
                 //if (in_duration > 82)
                 //{
